@@ -29,7 +29,8 @@ export type FormDefinition<T> = {
 export type FormAction<T extends FormData> =
   | { type: "blur"; field: keyof T }
   | { type: "change"; field: keyof T; value: any }
-  | { type: "submit" }; // After submit!
+  | { type: "submit" } // After submit!
+  | { type: "reset" };
 
 export type FieldState = {
   value: any;
@@ -85,7 +86,7 @@ function getInitialFieldState(fieldDefinition: FieldDefinition): FieldState {
     invalid: !valid,
     pristine: true,
     touched: false,
-    untouched: true
+    untouched: true,
   };
 }
 
@@ -96,7 +97,7 @@ function getInitialFieldsState<T extends FormData>(
   return keys.reduce(
     (o, key) => ({
       ...o,
-      [key]: getInitialFieldState(formDefinition.fields[key])
+      [key]: getInitialFieldState(formDefinition.fields[key]),
     }),
     {}
   ) as FieldsState<T>;
@@ -121,8 +122,8 @@ export function useForm<T extends FormData>(definition: FormDefinition<T>) {
             valid,
             invalid: !valid,
             pristine: false,
-            dirty: true
-          }
+            dirty: true,
+          },
         };
       case "blur":
         return {
@@ -130,8 +131,8 @@ export function useForm<T extends FormData>(definition: FormDefinition<T>) {
           [action.field]: {
             ...state[action.field],
             touched: true,
-            untouched: false
-          }
+            untouched: false,
+          },
         };
       case "submit":
         return keys.reduce(
@@ -142,18 +143,20 @@ export function useForm<T extends FormData>(definition: FormDefinition<T>) {
               dirty: false,
               pristine: true,
               touched: false,
-              untouched: true
-            }
+              untouched: true,
+            },
           }),
           {}
         ) as FieldsState<T>;
+      case "reset":
+        return getInitialFieldsState(definition);
     }
   };
   const getData = (fieldsState: FieldsState<T>) => {
     return keys.reduce(
       (o, key) => ({
         ...o,
-        [key]: fieldsState[key].value
+        [key]: fieldsState[key].value,
       }),
       {}
     ) as T;
@@ -164,16 +167,16 @@ export function useForm<T extends FormData>(definition: FormDefinition<T>) {
       valid: keys.reduce((v, key) => fieldsState[key].valid && v, true),
       pristine: keys.reduce((v, key) => fieldsState[key].pristine && v, true),
       dirty: keys.reduce((v, key) => fieldsState[key].dirty || v, false),
-      invalid: keys.reduce((i, key) => fieldsState[key].invalid || i, false)
+      invalid: keys.reduce((i, key) => fieldsState[key].invalid || i, false),
     };
   };
 
   const attachToInput = (fieldName: keyof T): AttachToInputResult => {
     return {
       value: state[fieldName].value,
-      onChange: e =>
+      onChange: (e) =>
         dispatch({ field: fieldName, type: "change", value: e.target.value }),
-      onBlur: () => dispatch({ field: fieldName, type: "blur" })
+      onBlur: () => dispatch({ field: fieldName, type: "blur" }),
     };
   };
 
@@ -183,6 +186,6 @@ export function useForm<T extends FormData>(definition: FormDefinition<T>) {
     form: getFormState(state),
     data: getData(state),
     dispatch,
-    attachToInput
+    attachToInput,
   };
 }
